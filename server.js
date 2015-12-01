@@ -2,6 +2,7 @@ var express = require('express');
 var session = require('express-session');
 var passport = require('passport');
 var FacebookStrategy = require('passport-facebook').Strategy
+var keys = require('./keys');
 
 var app = express();
 app.use(session({secret: 'Green ham spam man yeah man hi'}))
@@ -12,8 +13,8 @@ app.use(passport.session());
 
 
 passport.use(new FacebookStrategy({
-	clientID: '1524181241231804',
-	clientSecret: '21a90b890d5ad6fa16260be31d9e5ac2',
+	clientID: keys.facebookId,
+	clientSecret: keys.facebookSecret,
 	callbackURL: 'http://localhost:3000/auth/facebook/callback'
 }, function(token, refreshToken, profile, done){
 	return done(null, profile);
@@ -21,10 +22,10 @@ passport.use(new FacebookStrategy({
 
 app.get('/auth/facebook', passport.authenticate('facebook'));
 app.get('/auth/facebook/callback', passport.authenticate('facebook', {
-	successRedirect: '/',
+	successRedirect: '/me',
 	failureRedirect: '/login'
 }), function(req, res){
-	console.log(req.session);
+	console.log('GoGO POWERRANGERS',req.session);//this isn't doing anything
 })
 
 
@@ -34,12 +35,19 @@ passport.serializeUser(function(user, done){
 	done(null, user)
 })
 
+var requireAuth = function(req, res, next){
+	if (req.isAuthenticated()){
+		return next();
+	}
+	return res.redirct('/auth/facebook');
+}
+
 passport.deserializeUser(function(obj, done) {
 	//function called by passport after data is pulled from the session
   done(null, obj);
 });
 
-app.get('/me', function(req, res){
+app.get('/me', requireAuth, function(req, res){
 	var currentLogginInUserOnSession = req.user;
 	
 	res.send(currentLogginInUserOnSession);
